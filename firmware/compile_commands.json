@@ -1,0 +1,38 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/avr-gcc",
+      "-g",
+      "-Wall",
+      "-O2",
+      "-mmcu=atmega32u4",
+      "-DF_CPU=16000000UL",
+      "-DBAUD=9600",
+      "-c",
+      "-o",
+      "usb_serial.o",
+      "usb_serial.c"
+    ],
+    "directory": "/home/delusional/Documents/frametime",
+    "file": "/home/delusional/Documents/frametime/usb_serial.c",
+    "output": "/home/delusional/Documents/frametime/usb_serial.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/avr-gcc",
+      "-g",
+      "-Wall",
+      "-O2",
+      "-mmcu=atmega32u4",
+      "-DF_CPU=16000000UL",
+      "-DBAUD=9600",
+      "-c",
+      "-o",
+      "main.o",
+      "main.c"
+    ],
+    "directory": "/home/delusional/Documents/frametime",
+    "file": "/home/delusional/Documents/frametime/main.c",
+    "output": "/home/delusional/Documents/frametime/main.o"
+  }
+]

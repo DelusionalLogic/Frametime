@@ -1,0 +1,5 @@
+%compile_commands.json
+-target
+avr
+-mmcu=atmega32u4
+-I/usr/avr/include
