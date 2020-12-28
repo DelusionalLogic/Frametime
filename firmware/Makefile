@@ -18,7 +18,7 @@ AS             = avr-gcc
 # Override is only needed by avr-lib build system.
 
 override CFLAGS        = -g -Wall $(DEBUG) $(OPTIMIZE) -mmcu=$(MCU_TARGET) $(DEFS)
-override ASFLAGS       = $(DEBUG) -mmcu=$(MCU_TARGET) -mrelax
+override ASFLAGS       = $(DEBUG) -mmcu=$(MCU_TARGET)
 override LDFLAGS       = -Wl,-Map,$(PRG).map
 
 OBJCOPY        = avr-objcopy
