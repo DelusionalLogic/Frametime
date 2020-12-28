@@ -43,6 +43,9 @@ def measure(serial):
     if serial.read_until() != b"MSTA\n":
         raise Exception("Expected measurement to start")
 
+    variance = serial.read(2)
+    (variance,) = struct.unpack("!H", variance)
+
     values = []
     line = serial.read(4)
     while line != b"\xFF\xFF\xFF\xFF" and line != b"\xFF\xFF\xFF\xFE":
@@ -54,8 +57,6 @@ def measure(serial):
 
     data = []
     if len(values) >= 1:
-        time, value = struct.unpack("!HH", values[0])
-        data.append((-time, value))
         ts = 0
         for line in values[1:]:
             time, value = struct.unpack("!HH", line)
@@ -63,7 +64,7 @@ def measure(serial):
             # ts = time
             data.append((ts, value))
 
-    return data
+    return (variance, data)
 
 def handshake(serial):
     welcome = serial.read_until()
@@ -113,7 +114,8 @@ def main(output, delay):
     (resolution,) = info(serial)
 
     time.sleep(delay)
-    measurement = ts_to_us(resolution, measure(serial))
+    (_, measurement) = measure(serial)
+    measurement = ts_to_us(resolution, measurement)
     # measurement = measure(serial)
 
     writer = csv.writer(output, delimiter=';')

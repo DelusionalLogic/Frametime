@@ -1,4 +1,4 @@
-; vim set comments+=,:;:
+; vim: set comments+=\:;:
 #include <avr/io.h>
 __SP_H__ = 0x3E
 __SP_L__ = 0x3D
@@ -213,11 +213,6 @@ doMeasure_inner:
 
 	serialwrite r16
 	serialwrite r17
-
-	; Write dummy data
-	ldi r24, 0
-	serialwrite r24
-	serialwrite r24
 
 	; Reset the keyboard key. We don't really care how long this takes, so just
 	; use the library function
