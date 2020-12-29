@@ -145,7 +145,7 @@ int main ()
 	LED_OFF;
 
 	MCUCR &= 0b11101111;
- 
+
 	//Set D4 as imput
 	DDRD &= compl _BV(PIN4);
 
@@ -209,7 +209,7 @@ int main ()
 					pgm_send_str(PSTR("REJT\n"));
 					continue;
 				}
-				
+
 				char* strend = buf + n;
 				char* cursor = buf + 2;
 				if(!isdigit(*cursor)) {
