@@ -4,6 +4,33 @@ FrameTime
 Measure the time your computer/application/monitor takes from receiving
 a keypress to displaying something different.
 
+Why?
+----
+
+I believe response time is hugely important for the _feel_ of software. To that
+end I'm interested in measuring and comparing the response time of different
+applications. In the past I've used typometer[1], Which is easy to use and
+requires almost no setup.
+
+Typometer has a pretty severe limitation however. It only measures the time
+until another application can read the pixel, a value I ultimately don't care
+about. Instead I want to know the entire roundtrip time. From me pressing the
+key, to my eye being able to see the change on the monitor. No software only
+solution can provide that.
+
+Nvidia has the LDAT (Latency Display Analysis Tool) as part of their _reviewer
+toolkit_[2], but to my knowledge only people with platforms large enough to
+provide PR for Nvidia can get a hold of that. I'd have a hard time trusting
+a measurement device I can't audit anyway.
+
+FrameTime is an alternative to these options. It's cheap and available: You can
+make it yourself for around $20. It's open: So you can audit and fix it. It's
+external: So it captures end-to-end. It's composable: So you can automate it
+and use it has part of your build pipeline.
+
+[1]: https://pavelfatin.com/typometer/
+[2]: https://www.nvidia.com/en-us/geforce/news/nvidia-reviewer-toolkit/
+
 How it works
 ------------
 
