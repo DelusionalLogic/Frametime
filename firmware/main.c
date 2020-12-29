@@ -16,14 +16,9 @@
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
+
 #define LSB(n) (n & 255)
 #define MSB(n) ((n >> 8) & 255)
-
-#define LED_CONFIG	(DDRD |= (1<<6))
-#define LED_ON		(PORTD |= (1<<6))
-#define LED_OFF		(PORTD &= ~(1<<6))
-
-#define CPU_PRESCALE(n) (CLKPR = 0x80, CLKPR = (n))
 
 uint8_t test_kc;
 uint8_t reset_kc;
@@ -136,13 +131,11 @@ int main ()
 	// Setup
 	cli();
 
-	// We want the full 16MHz
-	CPU_PRESCALE(0);
-	usb_init();
+	// Configure the CPU prescaler. We want the full 16MHz
+	CLKPR = 0x80;
+	CLKPR = 0;
 
-	// Enable the debug led
-	LED_CONFIG;
-	LED_OFF;
+	usb_init();
 
 	MCUCR &= 0b11101111;
 
