@@ -29,3 +29,6 @@ Attribution
 The USB portion of this code is largly cobbled together from the examples
 provided by pjrc for the teensy, their copyright notice is included in the
 LICENSE.pjrc file.
+
+Original work is licensed under the GPLv3. A complete copy of the license can
+be found in LICENSE.
