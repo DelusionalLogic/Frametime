@@ -20,7 +20,7 @@ Hardware
 -------
 
 The inteded (and tested) hardware is a teensy2 with a SFH206K photodiode
-connected between pin D6 and ground. Theoretically any atmega32u4 based
+connected between pin D4 and ground. Theoretically any atmega32u4 based
 microprocessor should work.
 
 Attribution
