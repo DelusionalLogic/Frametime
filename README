@@ -10,23 +10,29 @@ How it works
 The hardware emulates a USB HID keyboard and a serial device. The serial device
 is used for control signal to configure the measurement and start it. When the
 measurement begins the device starts a timer and sends a keystroke. Using
-a photodiode the device continously monitors the light level of the monitor for
-some time while streaming the measurements and their timings over the serial
-interface. When measurement is completed (after a set amount of time) the
-device then sends a reset keystroke and emits a terminator on the serial bus.
-The measurement can then be analyzed after the fact.
+a photodiode the device continuously monitors the light level of the monitor
+for some time while streaming the measurements and their timings over the
+serial interface. When measurement is completed (after a set amount of time)
+the device then sends a reset keystroke and emits a terminator on the serial
+bus. The measurement can then be analyzed after the fact.
 
 Hardware
 -------
 
-The inteded (and tested) hardware is a teensy2 with a SFH206K photodiode
+The intended (and tested) hardware is a teensy2 with a SFH206K photodiode
 connected between pin D4 and ground. Theoretically any atmega32u4 based
 microprocessor should work.
+
+Teensy 2.0 - $16     https://www.pjrc.com/store/teensy.html
+SFH206K    - $ 1.37  https://www2.mouser.com/productdetail/osram-opto-semiconductors/sfh-206-k?qs=K5ta8V%252bWhtZrKhv9kwxagw==
+Enclosure  - $ 1.00  Assumes you have a 3D printer handy
+===================
+Total      - $18.37
 
 Attribution
 -----------
 
-The USB portion of this code is largly cobbled together from the examples
+The USB portion of this code is largely cobbled together from the examples
 provided by pjrc for the teensy, their copyright notice is included in the
 LICENSE.pjrc file.
 
