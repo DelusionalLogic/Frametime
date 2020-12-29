@@ -5,17 +5,6 @@
 
 #include "usb_serial.h"
 
-#ifdef NDEBUG
-#define assert(x)
-#else
-#define assert(x) do{ if(!(x)) _assert(); }while(0)
-#endif
-
-static void _assert() {
-	PORTD |= (1<<6);
-	abort();
-}
-
 #define EP_TYPE_CONTROL           0x00
 #define EP_TYPE_BULK_IN           0x81
 #define EP_TYPE_BULK_OUT          0x80
@@ -29,8 +18,6 @@ static void _assert() {
 			((s) == 32 ? 0x20 : \
 			((s) == 16 ? 0x10 : \
 			             0x00)))
-
-#define MAX_ENDPOINT 4
 
 #define LSB(n) (n & 255)
 #define MSB(n) ((n >> 8) & 255)
@@ -81,38 +68,11 @@ static void _assert() {
 
 #include <stddef.h>
 
-/**************************************************************************
- *
- *  Configurable Options
- *
- **************************************************************************/
-
-// You can change these to give your code its own name.  On Windows,
-// these are only used before an INF file (driver install) is loaded.
 #define STR_MANUFACTURER	L"Delusional"
 #define STR_PRODUCT		L"ScreenTimer"
 
-// All USB serial devices are supposed to have a serial number
-// (according to Microsoft).  On windows, a new COM port is created
-// for every unique serial/vendor/product number combination.  If
-// you program 2 identical boards with 2 different serial numbers
-// and they are assigned COM7 and COM8, each will always get the
-// same COM port number because Windows remembers serial numbers.
-//
-// On Mac OS-X, a device file is created automatically which
-// incorperates the serial number, eg, /dev/cu-usbmodem12341
-//
-// Linux by default ignores the serial number, and creates device
-// files named /dev/ttyACM0, /dev/ttyACM1... in the order connected.
-// Udev rules (in /etc/udev/rules.d) can define persistent device
-// names linked to this serial number, as well as permissions, owner
-// and group settings.
 #define STR_SERIAL_NUMBER	L"1"
 
-// Mac OS-X and Linux automatically load the correct drivers.  On
-// Windows, even though the driver is supplied by Microsoft, an
-// INF file is needed to load the driver.  These numbers need to
-// match the INF file.
 #define VENDOR_ID		0x16C0
 #define PRODUCT_ID		0x047A
 
@@ -133,33 +93,19 @@ static void _assert() {
 // use to know your data wasn't sent.
 #define TRANSMIT_TIMEOUT	25   /* in milliseconds */
 
-// USB devices are supposed to implment a halt feature, which is
-// rarely (if ever) used.  If you comment this line out, the halt
-// code will be removed, saving 116 bytes of space (gcc 4.3.0).
-// This is not strictly USB compliant, but works with all major
-// operating systems.
-#define SUPPORT_ENDPOINT_HALT
-
-
-
-/**************************************************************************
- *
- *  Endpoint Buffer Configuration
- *
- **************************************************************************/
-
-// These buffer sizes are best for most applications, but perhaps if you
-// want more buffering on some endpoint at the expense of others, this
-// is where you can make such changes.  The AT90USB162 has only 176 bytes
-// of DPRAM (USB buffers) and only endpoints 3 & 4 can double buffer.
-
+// USB controller configuration. This is where we tell the USB part of the
+// microcontroller how we want it to understand us.
 #define ENDPOINT0_SIZE      16
+
+#define MAX_ENDPOINT 4
 
 #define KEYBOARD_ENDPOINT   1
 #define CDC_ACM_ENDPOINT    2
 #define CDC_RX_ENDPOINT     3
 #define CDC_TX_ENDPOINT     4
 
+// Crucually the keyboard buffer should be single buffered to allow us to
+// detect when the host read it
 #define KEYBOARD_SIZE       8
 #define KEYBOARD_BUFFER     EP_SINGLE_BUFFER
 #define CDC_ACM_SIZE        16
@@ -182,18 +128,10 @@ static const struct Endpoint PROGMEM endpoint_config_table[ENDPOINT_CONFIG_LEN] 
 	{1, EP_TYPE_BULK_IN,       EP_SIZE(CDC_TX_SIZE) | CDC_TX_BUFFER}
 };
 
-
-/**************************************************************************
- *
- *  Descriptor Data
- *
- **************************************************************************/
-
-// Descriptors are the data that your computer reads when it auto-detects
-// this USB device (called "enumeration" in USB lingo).  The most commonly
-// changed items are editable at the top of this file.  Changing things
-// in here should only be done by those who've read chapter 9 of the USB
-// spec and relevant portions of any USB class specifications!
+// Descriptor data
+// This is the stuff the host uses to detect which kind of device we are. In
+// our case we are a USB HID device with a CDC_ACM serial interface and
+// a keyboard
 
 static const uint8_t PROGMEM device_descriptor[] = {
 	18,                               // bLength
@@ -383,9 +321,6 @@ static const uint8_t PROGMEM config1_descriptor[CONFIG1_DESC_SIZE] = {
 	1                                          // bInterval
 };
 
-// If you're desperate for a little extra code memory, these strings
-// can be completely removed if iManufacturer, iProduct, iSerialNumber
-// in the device desciptor are changed to zeros.
 struct usb_string_descriptor_struct {
 	uint8_t bLength;
 	uint8_t bDescriptorType;
@@ -431,13 +366,6 @@ static struct descriptor {
 };
 #define NUM_DESC_LIST (sizeof(descriptor_list)/sizeof(struct descriptor))
 
-
-/**************************************************************************
- *
- *  Variables - these are the only non-stack RAM usage
- *
- **************************************************************************/
-
 // zero when we are not configured, non-zero when enumerated
 static volatile uint8_t usb_configuration=0;
 
@@ -448,11 +376,12 @@ static uint8_t transmit_previous_timeout=0;
 
 #define KEYBOARD_KEYS_LEN 6
 uint8_t keyboard_keys[KEYBOARD_KEYS_LEN] = {0, 0, 0, 0, 0, 0};
+// The USB host expects to be able to set and read these
 static uint8_t keyboard_protocol = 1;
 static uint8_t keyboard_idle_config = 125;
 
-// serial port settings (baud rate, control signals, etc) set
-// by the PC.  These are ignored, but kept in RAM.
+// Serial port settings (baud rate, control signals, etc) set by the PC. The
+// host expects to be able to read them out again
 #define CDC_LINE_LEN 7
 static uint8_t cdc_line_coding[CDC_LINE_LEN]={0x00, 0xE1, 0x00, 0x00, 0x00, 0x00, 0x08};
 static uint8_t cdc_line_rtsdtr=0;
@@ -465,10 +394,6 @@ static void usb_send_in() {
 	UEINTX = ~_BV(TXINI);
 }
 
-static void usb_wait_receive_out() {
-	while (!(UEINTX & _BV(RXOUTI))) ;
-}
-
 static void usb_ack_out() {
 	UEINTX = ~_BV(RXOUTI);
 }
@@ -476,20 +401,17 @@ static void usb_ack_out() {
 static void setEP(uint8_t ep) {
 	UENUM = ep;
 }
-static uint8_t getEP() {
-	return UENUM;
-}
 
-static uint8_t rxBufferReadable(uint8_t intr) {
-	return intr & _BV(RWAL);
-}
-
-static uint8_t txBufferWritable(uint8_t intr) {
+static uint8_t bufferAvailable(uint8_t intr) {
 	return intr & _BV(RWAL);
 }
 
 static uint8_t containsNewPacket(uint8_t intr) {
 	return intr & _BV(RXOUTI);
+}
+
+static void usb_wait_receive_out() {
+	while (!containsNewPacket(UEINTX)) ;
 }
 
 static void txRelease() {
@@ -525,6 +447,7 @@ uint8_t usb_configured() {
 	return usb_configuration;
 }
 
+// Serial stuff
 int16_t usb_serial_getchar() {
 	if (!usb_configuration) return -1;
 
@@ -534,7 +457,7 @@ int16_t usb_serial_getchar() {
 	setEP(CDC_RX_ENDPOINT);
 retry:;
 	uint8_t  intr = UEINTX;
-	if (!rxBufferReadable(intr)) {
+	if (!bufferAvailable(intr)) {
 		// no data in buffer
 		if (containsNewPacket(intr)) {
 			rxRelease();
@@ -546,29 +469,10 @@ retry:;
 	// take one byte out of the buffer
 	uint8_t c = UEDATX;
 	// if buffer completely used, release it
-	if (!rxBufferReadable(UEINTX))
+	if (!bufferAvailable(UEINTX))
 		rxRelease();
 	SREG = intr_state;
 	return c;
-}
-
-// number of bytes available in the receive buffer
-uint8_t usb_serial_available() {
-	if(usb_configuration) return 0;
-
-	uint8_t intr_state = SREG;
-	cli();
-
-	setEP(CDC_RX_ENDPOINT);
-	uint8_t n = UEBCLX;
-	if (!n) {
-		uint8_t intr = UEINTX;
-		if (containsNewPacket(intr) && !rxBufferReadable(intr))
-			rxRelease();
-	}
-
-	SREG = intr_state;
-	return n;
 }
 
 void usb_serial_flush_input() {
@@ -578,14 +482,13 @@ void usb_serial_flush_input() {
 	cli();
 
 	setEP(CDC_RX_ENDPOINT);
-	while (rxBufferReadable(UEINTX)) {
+	while (bufferAvailable(UEINTX)) {
 		rxRelease();
 	}
 
 	SREG = intr_state;
 }
 
-// transmit a character.  0 returned on success, -1 on error
 int8_t usb_serial_putchar(uint8_t c) {
 
 	if (!usb_configuration) return -1;
@@ -595,7 +498,7 @@ int8_t usb_serial_putchar(uint8_t c) {
 	setEP(CDC_TX_ENDPOINT);
 	// if we gave up due to timeout before, don't wait again
 	if (transmit_previous_timeout) {
-		if (!txBufferWritable(UEINTX)) {
+		if (!bufferAvailable(UEINTX)) {
 			SREG = intr_state;
 			return -1;
 		}
@@ -605,7 +508,7 @@ int8_t usb_serial_putchar(uint8_t c) {
 	uint8_t timeout = UDFNUML + TRANSMIT_TIMEOUT;
 	while (1) {
 		// are we ready to transmit?
-		if (txBufferWritable(UEINTX)) break;
+		if (bufferAvailable(UEINTX)) break;
 		SREG = intr_state;
 		// have we waited too long?  This happens if the user
 		// is not running an application that is listening
@@ -623,42 +526,13 @@ int8_t usb_serial_putchar(uint8_t c) {
 	// actually write the byte into the FIFO
 	UEDATX = c;
 	// if this completed a packet, transmit it now!
-	if (!txBufferWritable(UEINTX))
+	if (!bufferAvailable(UEINTX))
 			txRelease();
 	transmit_flush_timer = TRANSMIT_FLUSH_TIMEOUT;
 	SREG = intr_state;
 	return 0;
 }
 
-void serial_fast_select() {
-	setEP(CDC_TX_ENDPOINT);
-}
-
-void serial_fast_write(uint8_t c) {
-	assert(getEP() == CDC_TX_ENDPOINT);
-	assert(txBufferWritable(UEINTX));
-
-	// actually write the byte into the FIFO
-	UEDATX = c;
-}
-
-void serial_fast_write16(uint16_t n) {
-	assert(getEP() == CDC_TX_ENDPOINT);
-
-	serial_fast_write(MSB(n));
-	serial_fast_write(LSB(n));
-}
-
-void serial_fast_flush() {
-	assert(getEP() == CDC_TX_ENDPOINT);
-
-	txRelease();
-}
-
-// immediately transmit any buffered output.  This doesn't actually transmit
-// the data - that is impossible!  USB devices only transmit when the host
-// allows, so the best we can do is release the FIFO buffer for when the host
-// wants it
 void usb_serial_flush_output() {
 	uint8_t intr_state;
 
@@ -676,23 +550,13 @@ uint8_t usb_serial_get_control() {
 	return cdc_line_rtsdtr;
 }
 
-
+// Keyboard stuff
 static void keyboard_write_report() {
 	UEDATX = 0;
 	UEDATX = 0;
 	for (uint8_t i = 0; i < KEYBOARD_KEYS_LEN; i++) {
 		UEDATX = keyboard_keys[i];
 	}
-}
-
-int8_t usb_keyboard_press(uint8_t key) {
-	keyboard_keys[0] = key;
-
-	int8_t r = usb_keyboard_send();
-	if (r) return r;
-
-	keyboard_keys[0] = 0;
-	return usb_keyboard_send();
 }
 
 int8_t usb_keyboard_ready() {
@@ -702,7 +566,7 @@ int8_t usb_keyboard_ready() {
 	uint8_t timeout = UDFNUML + 50;
 	while (1) {
 		// are we ready to transmit?
-		if (txBufferWritable(UEINTX)) break;
+		if (bufferAvailable(UEINTX)) break;
 
 		// has the USB gone offline?
 		if (!usb_configuration) return -1;
@@ -730,39 +594,6 @@ int8_t usb_keyboard_send() {
 
 	keyboard_write_report();
 	txRelease();
-
-	SREG = intr_state;
-	return 0;
-}
-
-int8_t usb_keyboard_send_sync() {
-
-	if (!usb_configuration) return -1;
-
-	uint8_t intr_state = SREG;
-	cli();
-
-	if(usb_keyboard_ready()) {
-		SREG = intr_state;
-		return -1;
-	}
-
-	keyboard_write_report();
-	txRelease();
-
-	// Wait for the next buffer to be available
-	// This should ideally (since we are single buffered) mean the host has
-	// ACKed our keyboard input, and should help reduce variance between return
-	// from this function and the host polling
-	// @CORRECTNESS: This does mean we return AFTER the host has received the
-	// keypress, hopefully we are still fast enough that we can measure the
-	// delay, but it could theoretically end up negative (and therefore
-	// unmeasurable). A possible alternative could be to send an empty packet
-	// at the start of this function, then immedietly schedule the keyboard
-	// packet to MAXIMIZE the delay between we queue the keypress and the host
-	// reads it. This makes it practically impossible to reach 0ms delay, but
-	// would still synchronize us to the poll -Delusional 09/12-2020
-	while (!(UEINTX & _BV(TXINI))) ;
 
 	SREG = intr_state;
 	return 0;

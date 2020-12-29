@@ -28,15 +28,6 @@
 uint8_t test_kc;
 uint8_t reset_kc;
 
-static void d_putchar(char c) {
-	usb_serial_putchar(c);
-}
-
-static void d_putu16(uint16_t v) {
-	usb_serial_putchar(MSB(v));
-	usb_serial_putchar(LSB(v));
-}
-
 static void enableTimer() {
 	// Enable Timer 1 with a 1/1 clock
 	TCCR1B = _BV(CS10);
@@ -57,7 +48,7 @@ static void pgm_send_str(const char *s) {
 	while (1) {
 		c = pgm_read_byte(s++);
 		if (!c) break;
-		d_putchar(c);
+		usb_serial_putchar(c);
 	}
 }
 
@@ -89,8 +80,11 @@ static inline uint8_t emitLevel(uint16_t level) {
 	uint8_t overflow = TIFR1 & _BV(TOV1);
 	resetTimer();
 
-	d_putu16(time);
-	d_putu16(level);
+	usb_serial_putchar(MSB(time));
+	usb_serial_putchar(LSB(time));
+
+	usb_serial_putchar(MSB(level));
+	usb_serial_putchar(LSB(level));
 
 	return overflow;
 }
@@ -126,7 +120,13 @@ static uint8_t doMeasure() {
 	usb_serial_flush_output();
 
 	sei();
-	usb_keyboard_press(reset_kc);
+
+	// Send the reset signal
+	keyboard_keys[0] = reset_kc;
+	usb_keyboard_send();
+	keyboard_keys[0] = 0;
+	usb_keyboard_send();
+
 	disableTimer();
 	return err;
 }

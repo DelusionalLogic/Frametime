@@ -1,12 +1,11 @@
 #pragma once
 #include <stdint.h>
 
-// Setup
+// Shared init
 void usb_init();
 uint8_t usb_configured();
 
 // Serial stuff
-
 #define USB_SERIAL_DTR 0x01
 #define USB_SERIAL_RTS 0x02
 #define USB_SERIAL_1_STOP 0
@@ -27,20 +26,14 @@ uint8_t usb_configured();
 
 // RX
 int16_t usb_serial_getchar();
-uint8_t usb_serial_available();
 void usb_serial_flush_input();
 
 // TX
 int8_t usb_serial_putchar(uint8_t c);
-int8_t usb_serial_putchar_nowait(uint8_t c);
 void usb_serial_flush_output();
 
+// Control
 uint8_t usb_serial_get_control();
-
-void serial_fast_select();
-void serial_fast_write(uint8_t c);
-void serial_fast_write16(uint16_t n);
-void serial_fast_flush();
 
 // Keyboard stuff
 extern uint8_t keyboard_keys[6];
@@ -144,8 +137,4 @@ extern uint8_t keyboard_keys[6];
 #define KEYPAD_PERIOD     99
 
 int8_t usb_keyboard_send();
-int8_t usb_keyboard_press(uint8_t key);
-
-int8_t usb_keyboard_send();
-int8_t usb_keyboard_send_sync();
 
