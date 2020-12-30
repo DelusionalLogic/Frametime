@@ -105,7 +105,8 @@ def ts_to_us(resolution, data):
 @click.command()
 @click.option("--output", "-o", type=click.File("w"), default=sys.stdout, help="Write values to files instead of stdout")
 @click.option("--delay", "-d", type=click.INT, default=0, help="Wait n seconds before taking the measurement")
-def main(output, delay):
+@click.option("--samples", "-s", type=click.INT, default=1, help="Number of samples to take")
+def main(output, delay, samples):
     device = find_device()
     serial = Serial(device)
     handshake(serial)
@@ -113,15 +114,17 @@ def main(output, delay):
     (resolution,) = info(serial)
 
     time.sleep(delay)
-    (variance, measurement) = measure(serial)
-    measurement = ts_to_us(resolution, measurement)
-    # measurement = measure(serial)
+    for sample in range(0, samples):
+        (variance, measurement) = measure(serial)
+        measurement = ts_to_us(resolution, measurement)
+        # measurement = measure(serial)
 
-    output.write(f"Measurement 1\n")
-    output.write(f"variance = {variance} cycles\n")
-    output.write(f"Time(us);Light(unitless)\n")
-    for (x, y) in measurement:
-        output.write(f"{x};{y}\n")
+        output.write(f"Measurement {sample}\n")
+        output.write(f"variance = {variance} cycles\n")
+        output.write(f"Time(us);Light(unitless)\n")
+        for (x, y) in measurement:
+            output.write(f"{x};{y}\n")
+        output.write("\n")
 
 if __name__ == "__main__":
     main()

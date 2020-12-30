@@ -42,7 +42,7 @@ def read_measurements(f):
         values = []
         while True:
             line = f.readline()
-            if line == "":
+            if line == "" or line == "\n":
                 break
             match = re.match(r"(\d+\.\d+);(\d+)", line)
             assert(match is not None)
