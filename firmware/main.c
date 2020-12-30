@@ -108,11 +108,8 @@ extern uint8_t doMeasure_inner(uint8_t key);
 static uint8_t doMeasure() {
 	uint8_t err = 0;
 	enableTimer();
-	cli();
 
 	err = doMeasure_inner(test_kc);
-
-	sei();
 
 	// Send the reset signal
 	keyboard_keys[0] = reset_kc;

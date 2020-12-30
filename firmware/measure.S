@@ -155,6 +155,9 @@ doMeasure_inner:
 	; Save kc for later
 	mov r15, r24
 
+	; We dont want interrupts to screw with the timing
+	cli
+
 	; Make sure the usb serial is empty
 	call usb_serial_flush_output
 
@@ -240,6 +243,8 @@ doMeasure_inner:
 
 	; Flush any remaining data
 	call usb_serial_flush_output
+
+	sei
 
 	; Return the overflow bit
 	mov r24, r16
