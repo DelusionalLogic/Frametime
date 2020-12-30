@@ -103,7 +103,7 @@ static uint8_t doCalibrate() {
 	return err;
 }
 
-extern uint8_t doMeasure_inner(uint8_t key, uint8_t reset);
+extern uint8_t doMeasure(uint8_t key, uint8_t reset);
 
 int main ()
 {
@@ -167,7 +167,7 @@ int main ()
 				}
 			} else if(buf[0] == 'M') {
 				pgm_send_str(PSTR("MSTA\n"));
-				if(doMeasure_inner(test_kc, reset_kc)) {
+				if(doMeasure(test_kc, reset_kc)) {
 					pgm_send_str(PSTR("\xFF\xFF\xFF\xFF"));
 				} else {
 					pgm_send_str(PSTR("\xFF\xFF\xFF\xFE"));

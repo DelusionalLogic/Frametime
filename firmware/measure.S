@@ -142,9 +142,9 @@ CDC_TX_ENDPOINT = 4
 .endm
 
 .text
-.global	doMeasure_inner
-.type	doMeasure_inner, @function ; (uint8_t test_kc, uint8_t reset_kc)
-doMeasure_inner:
+.global	doMeasure
+.type	doMeasure, @function ; (uint8_t test_kc, uint8_t reset_kc)
+doMeasure:
 	push r29
 	push r28
 	push r17
