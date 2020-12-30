@@ -106,22 +106,26 @@ def ts_to_us(resolution, data):
 @click.option("--output", "-o", type=click.File("w"), default=sys.stdout, help="Write values to files instead of stdout")
 @click.option("--delay", "-d", type=click.INT, default=0, help="Wait n seconds before taking the measurement")
 @click.option("--samples", "-s", type=click.INT, default=1, help="Number of samples to take")
-def main(output, delay, samples):
+@click.option("--convert", "-c", is_flag=True, help="Convert the time values to microseconds")
+def main(output, delay, samples, convert):
     device = find_device()
     serial = Serial(device)
     handshake(serial)
     keycodes(serial, 4, 42)
-    (resolution,) = info(serial)
+    if convert:
+        (resolution,) = info(serial)
+
+    time_units = "us" if convert else "cycles"
 
     time.sleep(delay)
     for sample in range(0, samples):
         (variance, measurement) = measure(serial)
-        measurement = ts_to_us(resolution, measurement)
-        # measurement = measure(serial)
+        if convert:
+            measurement = ts_to_us(resolution, measurement)
 
         output.write(f"Measurement {sample}\n")
         output.write(f"variance = {variance} cycles\n")
-        output.write(f"Time(us);Light(unitless)\n")
+        output.write(f"Time({time_units});Light(unitless)\n")
         for (x, y) in measurement:
             output.write(f"{x};{y}\n")
         output.write("\n")

@@ -44,7 +44,7 @@ def read_measurements(f):
             line = f.readline()
             if line == "" or line == "\n":
                 break
-            match = re.match(r"(\d+\.\d+);(\d+)", line)
+            match = re.match(r"(\d+(?:\.\d+)?);(\d+)", line)
             assert(match is not None)
             times.append(float(match.group(1)))
             values.append(int(match.group(2)))
