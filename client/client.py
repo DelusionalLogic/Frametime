@@ -5,7 +5,6 @@ import click
 from serial.tools.list_ports import comports as scan_ports
 from serial import Serial
 import sys
-import csv
 import struct
 
 def find_device():
@@ -118,10 +117,9 @@ def main(output, delay):
     measurement = ts_to_us(resolution, measurement)
     # measurement = measure(serial)
 
-    writer = csv.writer(output, delimiter=';')
-    writer.writerow(("Time(us)", "Light(unitless)"))
+    output.write(f"Time(us);Light(unitless)\n")
     for (x, y) in measurement:
-        writer.writerow((x, y))
+        output.write(f"{x};{y}\n")
 
 if __name__ == "__main__":
     main()
