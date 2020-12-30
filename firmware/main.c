@@ -103,19 +103,13 @@ static uint8_t doCalibrate() {
 	return err;
 }
 
-extern uint8_t doMeasure_inner(uint8_t key);
+extern uint8_t doMeasure_inner(uint8_t key, uint8_t reset);
 
 static uint8_t doMeasure() {
 	uint8_t err = 0;
 	enableTimer();
 
-	err = doMeasure_inner(test_kc);
-
-	// Send the reset signal
-	keyboard_keys[0] = reset_kc;
-	usb_keyboard_send();
-	keyboard_keys[0] = 0;
-	usb_keyboard_send();
+	err = doMeasure_inner(test_kc, reset_kc);
 
 	disableTimer();
 	return err;

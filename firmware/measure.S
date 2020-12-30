@@ -143,7 +143,7 @@ CDC_TX_ENDPOINT = 4
 
 .text
 .global	doMeasure_inner
-.type	doMeasure_inner, @function ; (uint8_t kc)
+.type	doMeasure_inner, @function ; (uint8_t test_kc, uint8_t reset_kc)
 doMeasure_inner:
 	push r29
 	push r28
@@ -154,6 +154,7 @@ doMeasure_inner:
 
 	; Save kc for later
 	mov r15, r24
+	mov r28, r22
 
 	; We dont want interrupts to screw with the timing
 	cli
@@ -245,6 +246,16 @@ doMeasure_inner:
 	call usb_serial_flush_output
 
 	sei
+
+	; Reset the keyboard key. We don't really care how long this takes, so just
+	; use the library function
+	sts keyboard_keys, r28
+	call usb_keyboard_send ; selects the keyboard interface
+
+	; Reset the keyboard key. We don't really care how long this takes, so just
+	; use the library function
+	sts keyboard_keys, __zero_reg__
+	call usb_keyboard_send ; selects the keyboard interface
 
 	; Return the overflow bit
 	mov r24, r16
