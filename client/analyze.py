@@ -6,7 +6,7 @@ import ruptures as rpt
 import numpy as np
 from scipy.stats import norm
 import sys
-import csv
+import re
 
 def find_changepoint(values):
     signal = np.array(values)
@@ -14,24 +14,61 @@ def find_changepoint(values):
     changes = algo.predict(n_bkps=1)
     return changes[0]
 
-@click.command()
-@click.argument("inputs", type=click.File("r"), nargs=-1)
-def main(inputs):
-    changetimes = []
-    for input_ in inputs:
-        reader = csv.reader(input_, delimiter=';')
+class Sample(object):
+    def __init__(self, variance, times, values):
+        self.variance = variance
+        self.times = times
+        self.values = values
+
+    def points(self):
+        return zip(self.times, self.values)
+
+def read_measurements(f):
+    samples = []
+    line = f.readline()
+    while line != "":
+        match = re.match(r"Measurement (\d+)", line)
+        assert(match != None)
+
+        line = f.readline()
+        match = re.match(r"variance = (\d+)", line)
+        assert(match != None)
+        variance = int(match.group(1))
+
+        # Header
+        f.readline()
+
         times = []
         values = []
-        next(reader, None)
-        for (x, y) in reader:
-            times.append(float(x))
-            values.append(int(y))
+        while True:
+            line = f.readline()
+            if line == "":
+                break
+            match = re.match(r"(\d+\.\d+);(\d+)", line)
+            assert(match is not None)
+            times.append(float(match.group(1)))
+            values.append(int(match.group(2)))
 
-        changepoint = find_changepoint(values)
+        samples.append(Sample(variance, times, values))
 
-        changetime = times[changepoint]
+        line = f.readline()
+        if line == "":
+            break
+
+    return samples
+
+@click.command()
+@click.argument("data", type=click.File("r"), nargs=1)
+def main(data):
+    changetimes = []
+    samples = read_measurements(data)
+    for sample in samples:
+
+        changepoint = find_changepoint(sample.values)
+
+        changetime = sample.times[changepoint]
         changetimes.append(changetime)
-        plt.plot(times, values)
+        plt.plot(sample.times, sample.values)
         plt.axvline(changetime)
     # plt.hist(changetimes, bins="auto")
     plt.show()

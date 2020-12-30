@@ -113,10 +113,12 @@ def main(output, delay):
     (resolution,) = info(serial)
 
     time.sleep(delay)
-    (_, measurement) = measure(serial)
+    (variance, measurement) = measure(serial)
     measurement = ts_to_us(resolution, measurement)
     # measurement = measure(serial)
 
+    output.write(f"Measurement 1\n")
+    output.write(f"variance = {variance} cycles\n")
     output.write(f"Time(us);Light(unitless)\n")
     for (x, y) in measurement:
         output.write(f"{x};{y}\n")
