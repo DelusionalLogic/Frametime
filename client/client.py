@@ -104,7 +104,7 @@ def ts_to_us(resolution, data):
 
 @click.command()
 @click.option("--output", "-o", type=click.File("w"), default=sys.stdout, help="Write values to files instead of stdout")
-@click.option("--delay", "-d", type=click.INT, default=0, help="Wait n seconds before taking the measurement")
+@click.option("--delay", "-d", type=click.FLOAT, default=0, help="Wait n seconds before taking the measurement")
 @click.option("--samples", "-s", type=click.INT, default=1, help="Number of samples to take")
 @click.option("--convert", "-c", is_flag=True, help="Convert the time values to microseconds")
 def main(output, delay, samples, convert):
@@ -117,8 +117,8 @@ def main(output, delay, samples, convert):
 
     time_units = "us" if convert else "cycles"
 
-    time.sleep(delay)
     for sample in range(0, samples):
+        time.sleep(delay)
         (variance, measurement) = measure(serial)
         if convert:
             measurement = ts_to_us(resolution, measurement)
