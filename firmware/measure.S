@@ -155,6 +155,9 @@ doMeasure_inner:
 	; Save kc for later
 	mov r15, r24
 
+	; Make sure the usb serial is empty
+	call usb_serial_flush_output
+
 	; Switch to the keyboard interface and wait for the next buffer to be ready
 	call usb_keyboard_ready
 
@@ -230,9 +233,16 @@ doMeasure_inner:
 
 	SAMPLE
 
-	; The overflow bit is the return value
-	in r24, _SFR_IO_ADDR(TIFR1)
-	andi r24, _BV(TOV1)
+	; Save if the overflow bit was set during the test because then the timing
+	; could have been wrong
+	in r16, _SFR_IO_ADDR(TIFR1)
+	andi r16, _BV(TOV1)
+
+	; Flush any remaining data
+	call usb_serial_flush_output
+
+	; Return the overflow bit
+	mov r24, r16
 	ldi r25, 0
 
 	pop r2

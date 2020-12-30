@@ -110,9 +110,7 @@ static uint8_t doMeasure() {
 	enableTimer();
 	cli();
 
-	usb_serial_flush_output();
 	err = doMeasure_inner(test_kc);
-	usb_serial_flush_output();
 
 	sei();
 
