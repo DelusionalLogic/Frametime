@@ -62,15 +62,18 @@ def read_measurements(f):
 def main(data):
     changetimes = []
     samples = read_measurements(data)
+
+    (fig, (time, hist)) = plt.subplots(2)
+    fig.suptitle("Plot")
     for sample in samples:
 
         changepoint = find_changepoint(sample.values)
 
         changetime = sample.times[changepoint]
         changetimes.append(changetime)
-        plt.plot(sample.times, sample.values)
-        plt.axvline(changetime)
-    # plt.hist(changetimes, bins="auto")
+        time.plot(sample.times, sample.values)
+        time.axvline(changetime)
+    hist.hist(changetimes, bins=100)
     plt.show()
 
 if __name__ == "__main__":
