@@ -156,6 +156,10 @@ doMeasure_inner:
 	mov r15, r24
 	mov r28, r22
 
+	; Enable timer with a 1/1 clock
+	ldi r24, _BV(CS10)
+	sts _SFR_MEM_ADDR(TCCR1B), r24
+
 	; We dont want interrupts to screw with the timing
 	cli
 
@@ -246,6 +250,13 @@ doMeasure_inner:
 	call usb_serial_flush_output
 
 	sei
+
+	; Disable timer
+	lds r24, _SFR_MEM_ADDR(TCCR1B)
+	andi r24, ~_BV(CS10)
+	andi r24, ~_BV(CS11)
+	andi r24, ~_BV(CS12)
+	sts _SFR_MEM_ADDR(TCCR1B), r24
 
 	; Reset the keyboard key. We don't really care how long this takes, so just
 	; use the library function
