@@ -8,6 +8,11 @@ from scipy.stats import norm
 import sys
 import re
 
+def moving_average(a, n=5) :
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / n
+
 def find_changepoint(signal):
     algo = rpt.Dynp(model="l1", jump=1).fit(signal)
     changes = algo.predict(n_bkps=1)
@@ -76,6 +81,9 @@ def main(data):
         values = np.array(sample.values)
 
         (times, values) = linear_interp(times, values)
+        values = moving_average(values)
+        # The moving average discards the ends of the values to reduce error
+        times = times[2:-2]
 
         changepoint = find_changepoint(values)
 
