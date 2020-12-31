@@ -8,8 +8,7 @@ from scipy.stats import norm
 import sys
 import re
 
-def find_changepoint(values):
-    signal = np.array(values)
+def find_changepoint(signal):
     algo = rpt.Dynp(model="l1", jump=1).fit(signal)
     changes = algo.predict(n_bkps=1)
     return changes[0]
@@ -57,6 +56,12 @@ def read_measurements(f):
 
     return samples
 
+def linear_interp(x, y):
+    periodic_x = np.linspace(x[0], x[-1], len(x))
+    periodic_y = np.interp(periodic_x, x, y)
+
+    return (periodic_x, periodic_y)
+
 @click.command()
 @click.argument("data", type=click.File("r"), nargs=1)
 def main(data):
@@ -67,13 +72,15 @@ def main(data):
     fig.suptitle("Plot")
     for sample in samples:
 
-        changepoint = find_changepoint(sample.values)
-
-        changetime = sample.times[changepoint]
-        changetimes.append(changetime)
-
         times = np.array(sample.times)
         values = np.array(sample.values)
+
+        (times, values) = linear_interp(times, values)
+
+        changepoint = find_changepoint(values)
+
+        changetime = times[changepoint]
+        changetimes.append(changetime)
 
         time.plot(times, values)
         time.axvline(changetime)
