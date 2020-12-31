@@ -71,7 +71,11 @@ def main(data):
 
         changetime = sample.times[changepoint]
         changetimes.append(changetime)
-        time.plot(sample.times, sample.values)
+
+        times = np.array(sample.times)
+        values = np.array(sample.values)
+
+        time.plot(times, values)
         time.axvline(changetime)
     hist.hist(changetimes, bins=100)
     plt.show()
