@@ -1,10 +1,14 @@
 #!/bin/python3
 
 import click
+import math
 import matplotlib.pyplot as plt
-import ruptures as rpt
 import numpy as np
-from scipy.stats import norm
+from scipy.optimize import curve_fit
+from scipy.stats import (
+    norm,
+    uniform
+)
 import sys
 import re
 
@@ -12,11 +16,6 @@ def moving_average(a, n=5) :
     ret = np.cumsum(a, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
-
-def find_changepoint(signal):
-    algo = rpt.Dynp(model="l1", jump=1).fit(signal)
-    changes = algo.predict(n_bkps=1)
-    return changes[0]
 
 class Sample(object):
     def __init__(self, variance, times, values):
@@ -67,14 +66,21 @@ def linear_interp(x, y):
 
     return (periodic_x, periodic_y)
 
+def unifunc(x, a, b):
+    if x < a or x > b:
+        return 0
+    else:
+        return 1 / b-a
+
 @click.command()
-@click.argument("data", type=click.File("r"), nargs=1)
-def main(data):
+@click.argument("data", type=click.File("r"), default=sys.stdin, nargs=1)
+@click.option("--output", "-o", type=click.File("w"), default=sys.stdout, help="Write values to files instead of stdout")
+def main(data, output):
     changetimes = []
+    risetimes = []
+    deltas = []
     samples = read_measurements(data)
 
-    (fig, (time, hist)) = plt.subplots(2)
-    fig.suptitle("Plot")
     for sample in samples:
 
         times = np.array(sample.times)
@@ -85,15 +91,40 @@ def main(data):
         # The moving average discards the ends of the values to reduce error
         times = times[2:-2]
 
-        changepoint = find_changepoint(values)
+        # Check if there's a significant difference between the initial and
+        # final light level
+        rise = values[-1] - values[0]
+        if rise < 10:
+            raise Exception("No significant different in light level")
 
-        changetime = times[changepoint]
+        deltas.append(rise)
+
+        rise_lim = rise * .1
+
+        begin = np.argmax(values > (values[1] + rise_lim))
+        end = np.argmin(values < (values[-1] - rise_lim))
+
+        risetime = (times[end] - times[begin])
+        risetimes.append(risetime)
+
+        midpoint = np.argmax(values > (values[1] + (rise/2)))
+
+        changetime = times[midpoint]
         changetimes.append(changetime)
 
-        time.plot(times, values)
-        time.axvline(changetime)
-    hist.hist(changetimes, bins=100)
-    plt.show()
+    signal_delta = sum(deltas) / len(deltas)
+
+    (loc, scale) = uniform.fit(changetimes)
+    lag_min = loc
+    lag_max = loc + scale
+
+    (rise_mu, rise_std) = norm.fit(risetimes)
+
+    output.write(f"Signal: {signal_delta}\n")
+    output.write(f"Minimum Lag: {lag_min}\n")
+    output.write(f"Maximum Lag: {lag_max}\n")
+    output.write(f"Mean Risetime: {rise_mu}\n")
+    output.write(f"Stddev Risetime: {rise_std}\n")
 
 if __name__ == "__main__":
     main()
