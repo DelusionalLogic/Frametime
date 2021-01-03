@@ -4,11 +4,8 @@ import click
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.optimize import curve_fit
-from scipy.stats import (
-    norm,
-    uniform
-)
+import scipy.stats as stats
+from pathlib import Path
 import sys
 import re
 
@@ -72,59 +69,83 @@ def unifunc(x, a, b):
     else:
         return 1 / b-a
 
+class InputArg(object):
+    def __init__(self, arg):
+        split = arg.split(":", 1)
+        if len(split) > 1:
+            self.title = split[0]
+            self.path = Path(split[1])
+        else:
+            self.title = split[0]
+            self.path = Path(split[0])
+
 @click.command()
-@click.argument("data", type=click.File("r"), default=sys.stdin, nargs=1)
+@click.argument("data", nargs=-1)
 @click.option("--output", "-o", type=click.File("w"), default=sys.stdout, help="Write values to files instead of stdout")
-def main(data, output):
-    changetimes = []
-    risetimes = []
-    deltas = []
-    samples = read_measurements(data)
+@click.option("--header", is_flag=True, help="Write a header")
+@click.option("--trim", "-t", type=float, default=0, help="Trim the lag times")
+def main(data, output, header, trim):
+    if header:
+        output.write(f"               title     signal    lag_min  lag_delta  rise_mean rise_stddev\n")
 
-    for sample in samples:
+    args = [InputArg(x) for x in data]
 
-        times = np.array(sample.times)
-        values = np.array(sample.values)
+    for arg in args:
+        if arg.path.exists() and arg.path.is_file():
+            continue
 
-        (times, values) = linear_interp(times, values)
-        values = moving_average(values)
-        # The moving average discards the ends of the values to reduce error
-        times = times[2:-2]
+        sys.stderr.write(f"{arg.path}: file does not exist\n")
+        exit(1)
 
-        # Check if there's a significant difference between the initial and
-        # final light level
-        rise = values[-1] - values[0]
-        if rise < 10:
-            raise Exception("No significant different in light level")
+    for arg in args:
+        with open(arg.path, "r") as f:
+            samples = read_measurements(f)
 
-        deltas.append(rise)
+        changetimes = []
+        risetimes = []
+        deltas = []
+        for sample in samples:
 
-        rise_lim = rise * .1
+            times = np.array(sample.times)
+            values = np.array(sample.values)
 
-        begin = np.argmax(values > (values[1] + rise_lim))
-        end = np.argmin(values < (values[-1] - rise_lim))
+            (times, values) = linear_interp(times, values)
+            values = moving_average(values)
+            # The moving average discards the ends of the values to reduce error
+            times = times[2:-2]
 
-        risetime = (times[end] - times[begin])
-        risetimes.append(risetime)
+            # Check if there's a significant difference between the initial and
+            # final light level
+            rise = values[-1] - values[0]
+            if rise < 10:
+                raise Exception("No significant different in light level")
 
-        midpoint = np.argmax(values > (values[1] + (rise/2)))
+            deltas.append(rise)
 
-        changetime = times[midpoint]
-        changetimes.append(changetime)
+            rise_lim = rise * .1
 
-    signal_delta = sum(deltas) / len(deltas)
+            begin = np.argmax(values > (values[1] + rise_lim))
+            end = np.argmin(values < (values[-1] - rise_lim))
 
-    (loc, scale) = uniform.fit(changetimes)
-    lag_min = loc
-    lag_max = loc + scale
+            risetime = (times[end] - times[begin])
+            risetimes.append(risetime)
 
-    (rise_mu, rise_std) = norm.fit(risetimes)
+            midpoint = np.argmax(values > (values[1] + (rise/2)))
 
-    output.write(f"Signal: {signal_delta}\n")
-    output.write(f"Minimum Lag: {lag_min}\n")
-    output.write(f"Maximum Lag: {lag_max}\n")
-    output.write(f"Mean Risetime: {rise_mu}\n")
-    output.write(f"Stddev Risetime: {rise_std}\n")
+            changetime = times[midpoint]
+            changetimes.append(changetime)
+
+        signal_delta = sum(deltas) / len(deltas)
+
+        changetimes = np.array(changetimes)
+        if trim != 0:
+            changetimes = stats.trimboth(changetimes, trim)
+        (loc, scale) = stats.uniform.fit(changetimes)
+        lag_min = loc
+
+        (rise_mu, rise_std) = stats.norm.fit(risetimes)
+
+        output.write(f"{arg.title:>20} {signal_delta:10.3f} {lag_min:10.3f} {scale:10.3f} {rise_mu:10.3f} {rise_std:11.3f}\n")
 
 if __name__ == "__main__":
     main()
