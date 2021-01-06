@@ -43,6 +43,75 @@ serial interface. When measurement is completed (after a set amount of time)
 the device then sends a reset keystroke and emits a terminator on the serial
 bus. The measurement can then be analyzed after the fact.
 
+FrameTime consists of a firmware, which is flashed to the teensy, and a client,
+which talks to the firmware and works with the results. The firmware is should
+be compilable using the Makefile and the avr-gcc toolchain. to flash the
+resulting hex file I use teensy-loader-cli as such:
+
+    teensy-loader-cli --mcu atmega32u4 main.hex
+
+The teensy should then reboot and be ready. You will see that it will register
+itself as an USB HIDevice.
+
+The client is written in Python. To use it, place the device on the screen and
+run the command
+
+    client.py -s <sample_count> -d <delay> -o data.measure
+
+The sample_count is the number of tests you want to run, and the delay is the
+time between tests. Measurements will be written to data.measure.
+
+You can then analyze the results with
+
+    analyze.py data.measure --header
+
+Which will output some interesting statistics. An example can be see in this
+analysis data collected with xterm
+
+                   title     signal    lag_min  lag_delta  rise_mean rise_stddev
+                   xterm     19.106  43973.000 142593.000  62733.758   15776.126
+
+analyse.py can take multiple measure files at once to output an analysis of all
+of them.
+
+Example
+-------
+
+We can compare the performance of cat on xterm and sublime text 3. We do this
+by opening each application with a large font size and a black background.
+For xterm this is accomplished with arguments
+
+    $ xterm -fa monaco -fs 100 -bg black
+
+For sublime text we have to modify the settings. This is left as an extersize
+to the reader.
+
+We then position the measurement device such that the light sensor will recieve
+more light after a press of the 'a' button. For xterm this means we place the
+light sensor on top of the new cursor position. For sublime it means we place
+it on top of the a letter. We then run the client
+
+    $ sleep 10; client.py -s 10000 -d 0.04 -o xterm.measure
+    $ sleep 10; client.py -s 10000 -d 0.04 -o subl.measure
+
+The initial sleep is used to allow us to move focus back to the window we want
+to test.
+
+After both tests have run we analyze the results
+
+    $ analyze.py xterm:data3.measure sublime:subl.measure --header -t .01
+                   title     signal    lag_min  lag_delta  rise_mean rise_stddev
+                   xterm     19.106  48423.000 126472.000  62733.758   15776.126
+                 sublime     16.358  97788.000 133648.000  52678.657   18754.689
+
+The results show us that sublime text 3 seems to take 50 000 cycles more to
+display our letter. Since the teensy runs at 16MHz we can convert it to seconds
+
+    $ units 50000/16Mhz
+        Definition: 0.003125 s
+
+So sublime text 3 is about 3 milliseconds slower than xterm
+
 Hardware
 -------
 
