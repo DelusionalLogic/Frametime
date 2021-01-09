@@ -118,7 +118,7 @@ def main(data, output, header, trim):
             # final light level
             rise = values[-1] - values[0]
             if rise < 10:
-                raise Exception("No significant different in light level")
+                raise Exception("No significant difference in light level")
 
             deltas.append(rise)
 
