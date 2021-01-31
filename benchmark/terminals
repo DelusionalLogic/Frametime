@@ -1,0 +1,79 @@
+#!/bin/bash
+
+function moveWindow() {
+	bspc node focused -t floating
+	xdotool getactivewindow windowmove 500 800 windowsize 400 400
+}
+
+function runTest() {
+	NAME="$1"
+	moveWindow
+	sleep 1 # Give the window some time to settle
+
+	../client/client.py -s 10000 -d 0.04 -o $NAME.measure
+}
+
+function waitForWindow() {
+	local W="$1"
+
+	local WINDOW_TITLE=""
+	while [[ $WINDOW_TITLE != "$W" ]]; do
+		WINDOW_TITLE=$(xdotool getactivewindow getwindowname)
+	done
+}
+
+xterm -fa monaco -fs 100 -bg black -title xterm -e "cat" &
+TERM_PID="$!"
+waitForWindow "xterm"
+moveWindow
+echo "Now place the tester, and close the window"
+
+# Wait for window to close/lose focus
+WINDOW_TITLE=$(xdotool getactivewindow getwindowname)
+while [[ $WINDOW_TITLE == "xterm" ]]; do
+	WINDOW_TITLE=$(xdotool getactivewindow getwindowname)
+done
+
+# Silence the error from this since the process is likely already closed
+kill $TERM_PID 2>/dev/null
+echo "Beginning test"
+
+xterm -fa monaco -fs 100 -bg black -title xterm -e "cat" &
+TERM_PID="$!"
+
+# Wait for the terminal window
+waitForWindow "xterm"
+
+runTest "xterm"
+
+kill $TERM_PID
+
+urxvt -fn "xft:monaco:size=100" -bg black -title urxvt -e cat &
+TERM_PID="$!"
+
+# Wait for the terminal window
+waitForWindow "urxvt"
+
+runTest "urxvt"
+
+kill $TERM_PID
+
+termite -c ./termite -t termite -e cat &
+TERM_PID="$!"
+
+# Wait for the terminal window
+waitForWindow "termite"
+
+runTest "termite"
+
+kill $TERM_PID
+
+alacritty --config-file ./alacritty.yml -t alacritty -e cat &
+TERM_PID="$!"
+
+# Wait for the terminal window
+waitForWindow "alacritty"
+
+runTest "alacritty"
+
+kill $TERM_PID
